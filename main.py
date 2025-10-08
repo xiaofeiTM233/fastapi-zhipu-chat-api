@@ -1,6 +1,5 @@
 import os
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from zai import ZhipuAiClient
 
@@ -48,21 +47,21 @@ app = FastAPI(
 class ChatRequest(BaseModel):
     data: str = Field(..., min_length=1, description="用户发送给 AI 的纯文本内容")
 
-@app.post("/api/chat", response_class=PlainTextResponse)
+@app.post("/api/chat")
 async def handle_chat_request(request: ChatRequest):
     try:
         # 调用 chat 函数处理从请求中提取的文本
         ai_result = chat(request.data)
-        return ai_result
+        return {"data": ai_result}
     except Exception as e:
         # 如果 chat 函数内部（如 API 调用）发生错误，打印日志并返回 500 错误
         print(f"处理请求时发生错误: {e}")
         raise HTTPException(
             status_code=500, 
-            detail="与 AI 服务通信时发生内部错误，请稍后再试。"
+            detail={"data": "与 AI 服务通信时发生内部错误，请稍后再试。"}
         )
 
 # 可选：添加一个根路径的 GET 请求，用于健康检查或基本说明
-@app.get("/", response_class=PlainTextResponse)
+@app.get("/")
 def root():
-    return f"AI 聊天服务已就绪。\n请向 /api/chat 发送 POST 请求。\n模型: {model_name}"
+    return {"data": f"AI 聊天服务已就绪。\n请向 /api/chat 发送 POST 请求。\n模型: {model_name}"}
