@@ -1,28 +1,55 @@
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fexamples%2Ftree%2Fmain%2Fpython%2Ffastapi&demo-title=FastAPI&demo-description=Use%20FastAPI%20on%20Vercel%20with%20Serverless%20Functions%20using%20the%20Python%20Runtime.&demo-url=https%3A%2F%2Fvercel-plus-fastapi.vercel.app%2F&demo-image=https://assets.vercel.com/image/upload/v1669994600/random/python.png)
+# fastapi-zhipu-chat-api
 
-# FastAPI + Vercel
+一个基于 FastAPI 的智谱 AI 聊天服务，提供简洁的 REST API 接口与智谱 AI 进行对话。
 
-This example shows how to use FastAPI on Vercel with Serverless Functions using the [Python Runtime](https://vercel.com/docs/concepts/functions/serverless-functions/runtimes/python).
+## 功能特性
 
-## Demo
+- 🚀 基于 FastAPI 构建，性能优异
+- 🤖 集成智谱 AI (ZhipuAI) 聊天功能
+- 📝 支持纯文本对话交互
+- 🔧 环境变量配置，灵活部署
+- 📚 自动生成 API 文档
+- 🛡️ 完善的错误处理机制
 
-https://vercel-plus-fastapi.vercel.app/
+## 快速开始
 
-## How it Works
+### 环境要求
 
-This example uses the Asynchronous Server Gateway Interface (ASGI) with FastAPI to enable handling requests on Vercel with Serverless Functions.
+- Python 3.8+
+- 智谱 AI API Key
 
-## Running Locally
+### 安装依赖
 
 ```bash
-npm i -g vercel
-vercel dev
+pip install -r requirements.txt
 ```
 
-Your FastAPI application is now available at `http://localhost:3000`.
+### 环境配置
 
-## One-Click Deploy
+创建 `.env` 文件并设置以下环境变量：
 
-Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples):
+```env
+ZHIPUAI_API_KEY=your_zhipuai_api_key_here
+ZHIPUAI_MODEL=glm-4-flash
+```
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fexamples%2Ftree%2Fmain%2Fpython%2Ffastapi&demo-title=FastAPI&demo-description=Use%20FastAPI%20on%20Vercel%20with%20Serverless%20Functions%20using%20the%20Python%20Runtime.&demo-url=https%3A%2F%2Fvercel-plus-fastapi.vercel.app%2F&demo-image=https://assets.vercel.com/image/upload/v1669994600/random/python.png)
+## 部署
+
+### Vercel 部署
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/xiaofeiTM233/fastapi-zhipu-chat-api)
+
+1. Fork 本项目到你的 GitHub
+2. 在 Vercel 中导入项目
+3. 设置环境变量 `ZHIPUAI_API_KEY` 和 `ZHIPUAI_MODEL`
+4. 部署完成
+
+## 配置说明
+
+| 环境变量 | 必需 | 默认值 | 说明 |
+|---------|------|--------|------|
+| `ZHIPUAI_API_KEY` | ✅ | - | 智谱 AI API 密钥 |
+| `ZHIPUAI_MODEL` | ❌ | `glm-4-flash` | 使用的模型名称 |
+
+## 说明
+
+本 README 文档由 AI 辅助生成。如有问题，请提交 Issue 或[与我联系](https://github.com/xiaofeiTM233)！

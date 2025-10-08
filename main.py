@@ -1,344 +1,68 @@
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+import os
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel, Field
+from zai import ZhipuAiClient
 
+# --- 1. 配置与初始化 ---
+
+# 从环境变量获取 API Key，如果不存在则服务无法启动
+api_key = os.environ.get("ZHIPUAI_API_KEY")
+if not api_key:
+    raise ValueError("环境变量 ZHIPUAI_API_KEY 未设置，服务无法启动。")
+
+# 从环境变量获取模型名称，如果不存在则使用默认值 "glm-4-flash"
+model_name = os.environ.get("ZHIPUAI_MODEL", "glm-4-flash")
+
+# 初始化 ZhipuAI 客户端
+client = ZhipuAiClient(api_key=api_key)
+
+print(f"服务已启动，使用 AI 模型: {model_name}")
+
+# --- 2. AI 聊天核心函数 ---
+
+def chat(user_prompt: str) -> str:
+    if not user_prompt or not user_prompt.strip():
+        # 如果输入为空，直接返回提示，不调用 API
+        return "输入内容不能为空。"
+        
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=[
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+    ai_response = response.choices[0].message.content
+    return ai_response.strip()
+
+
+# --- 3. FastAPI 应用 ---
 
 app = FastAPI(
-    title="Vercel + FastAPI",
-    description="Vercel + FastAPI",
+    title="fastapi-zhipu-chat-api",
+    description="一个基于 FastAPI 的智谱 AI 聊天服务，提供简洁的 REST API 接口，支持快速部署和环境变量配置。",
     version="1.0.0",
 )
 
+# 定义请求体的数据模型，确保请求的 JSON 中包含一个名为 'data' 的字符串
+class ChatRequest(BaseModel):
+    data: str = Field(..., min_length=1, description="用户发送给 AI 的纯文本内容")
 
-@app.get("/api/data")
-def get_sample_data():
-    return {
-        "data": [
-            {"id": 1, "name": "Sample Item 1", "value": 100},
-            {"id": 2, "name": "Sample Item 2", "value": 200},
-            {"id": 3, "name": "Sample Item 3", "value": 300}
-        ],
-        "total": 3,
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+@app.post("/api/chat", response_class=PlainTextResponse)
+async def handle_chat_request(request: ChatRequest):
+    try:
+        # 调用 chat 函数处理从请求中提取的文本
+        ai_result = chat(request.data)
+        return ai_result
+    except Exception as e:
+        # 如果 chat 函数内部（如 API 调用）发生错误，打印日志并返回 500 错误
+        print(f"处理请求时发生错误: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail="与 AI 服务通信时发生内部错误，请稍后再试。"
+        )
 
-
-@app.get("/api/items/{item_id}")
-def get_item(item_id: int):
-    return {
-        "item": {
-            "id": item_id,
-            "name": "Sample Item " + str(item_id),
-            "value": item_id * 100
-        },
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
-
-
-@app.get("/", response_class=HTMLResponse)
-def read_root():
-    return """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Vercel + FastAPI</title>
-        <link rel="icon" type="image/x-icon" href="/favicon.ico">
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-                background-color: #000000;
-                color: #ffffff;
-                line-height: 1.6;
-                min-height: 100vh;
-                display: flex;
-                flex-direction: column;
-            }
-            
-            header {
-                border-bottom: 1px solid #333333;
-                padding: 0;
-            }
-            
-            nav {
-                max-width: 1200px;
-                margin: 0 auto;
-                display: flex;
-                align-items: center;
-                padding: 1rem 2rem;
-                gap: 2rem;
-            }
-            
-            .logo {
-                font-size: 1.25rem;
-                font-weight: 600;
-                color: #ffffff;
-                text-decoration: none;
-            }
-            
-            .nav-links {
-                display: flex;
-                gap: 1.5rem;
-                margin-left: auto;
-            }
-            
-            .nav-links a {
-                text-decoration: none;
-                color: #888888;
-                padding: 0.5rem 1rem;
-                border-radius: 6px;
-                transition: all 0.2s ease;
-                font-size: 0.875rem;
-                font-weight: 500;
-            }
-            
-            .nav-links a:hover {
-                color: #ffffff;
-                background-color: #111111;
-            }
-            
-            main {
-                flex: 1;
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 4rem 2rem;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-            
-            .hero {
-                margin-bottom: 3rem;
-            }
-            
-            .hero-code {
-                margin-top: 2rem;
-                width: 100%;
-                max-width: 900px;
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            }
-            
-            .hero-code pre {
-                background-color: #0a0a0a;
-                border: 1px solid #333333;
-                border-radius: 8px;
-                padding: 1.5rem;
-                text-align: left;
-                grid-column: 1 / -1;
-            }
-            
-            h1 {
-                font-size: 3rem;
-                font-weight: 700;
-                margin-bottom: 1rem;
-                background: linear-gradient(to right, #ffffff, #888888);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-            }
-            
-            .subtitle {
-                font-size: 1.25rem;
-                color: #888888;
-                margin-bottom: 2rem;
-                max-width: 600px;
-            }
-            
-            .cards {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 1.5rem;
-                width: 100%;
-                max-width: 900px;
-            }
-            
-            .card {
-                background-color: #111111;
-                border: 1px solid #333333;
-                border-radius: 8px;
-                padding: 1.5rem;
-                transition: all 0.2s ease;
-                text-align: left;
-            }
-            
-            .card:hover {
-                border-color: #555555;
-                transform: translateY(-2px);
-            }
-            
-            .card h3 {
-                font-size: 1.125rem;
-                font-weight: 600;
-                margin-bottom: 0.5rem;
-                color: #ffffff;
-            }
-            
-            .card p {
-                color: #888888;
-                font-size: 0.875rem;
-                margin-bottom: 1rem;
-            }
-            
-            .card a {
-                display: inline-flex;
-                align-items: center;
-                color: #ffffff;
-                text-decoration: none;
-                font-size: 0.875rem;
-                font-weight: 500;
-                padding: 0.5rem 1rem;
-                background-color: #222222;
-                border-radius: 6px;
-                border: 1px solid #333333;
-                transition: all 0.2s ease;
-            }
-            
-            .card a:hover {
-                background-color: #333333;
-                border-color: #555555;
-            }
-            
-            .status-badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                background-color: #0070f3;
-                color: #ffffff;
-                padding: 0.25rem 0.75rem;
-                border-radius: 20px;
-                font-size: 0.75rem;
-                font-weight: 500;
-                margin-bottom: 2rem;
-            }
-            
-            .status-dot {
-                width: 6px;
-                height: 6px;
-                background-color: #00ff88;
-                border-radius: 50%;
-            }
-            
-            pre {
-                background-color: #0a0a0a;
-                border: 1px solid #333333;
-                border-radius: 6px;
-                padding: 1rem;
-                overflow-x: auto;
-                margin: 0;
-            }
-            
-            code {
-                font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-                font-size: 0.85rem;
-                line-height: 1.5;
-                color: #ffffff;
-            }
-            
-            /* Syntax highlighting */
-            .keyword {
-                color: #ff79c6;
-            }
-            
-            .string {
-                color: #f1fa8c;
-            }
-            
-            .function {
-                color: #50fa7b;
-            }
-            
-            .class {
-                color: #8be9fd;
-            }
-            
-            .module {
-                color: #8be9fd;
-            }
-            
-            .variable {
-                color: #f8f8f2;
-            }
-            
-            .decorator {
-                color: #ffb86c;
-            }
-            
-            @media (max-width: 768px) {
-                nav {
-                    padding: 1rem;
-                    flex-direction: column;
-                    gap: 1rem;
-                }
-                
-                .nav-links {
-                    margin-left: 0;
-                }
-                
-                main {
-                    padding: 2rem 1rem;
-                }
-                
-                h1 {
-                    font-size: 2rem;
-                }
-                
-                .hero-code {
-                    grid-template-columns: 1fr;
-                }
-                
-                .cards {
-                    grid-template-columns: 1fr;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <header>
-            <nav>
-                <a href="/" class="logo">Vercel + FastAPI</a>
-                <div class="nav-links">
-                    <a href="/docs">API Docs</a>
-                    <a href="/api/data">API</a>
-                </div>
-            </nav>
-        </header>
-        <main>
-            <div class="hero">
-                <h1>Vercel + FastAPI</h1>
-                <div class="hero-code">
-                    <pre><code><span class="keyword">from</span> <span class="module">fastapi</span> <span class="keyword">import</span> <span class="class">FastAPI</span>
-
-<span class="variable">app</span> = <span class="class">FastAPI</span>()
-
-<span class="decorator">@app.get</span>(<span class="string">"/"</span>)
-<span class="keyword">def</span> <span class="function">read_root</span>():
-    <span class="keyword">return</span> {<span class="string">"Python"</span>: <span class="string">"on Vercel"</span>}</code></pre>
-                </div>
-            </div>
-            
-            <div class="cards">
-                <div class="card">
-                    <h3>Interactive API Docs</h3>
-                    <p>Explore this API's endpoints with the interactive Swagger UI. Test requests and view response schemas in real-time.</p>
-                    <a href="/docs">Open Swagger UI →</a>
-                </div>
-                
-                <div class="card">
-                    <h3>Sample Data</h3>
-                    <p>Access sample JSON data through our REST API. Perfect for testing and development purposes.</p>
-                    <a href="/api/data">Get Data →</a>
-                </div>
-                
-            </div>
-        </main>
-    </body>
-    </html>
-    """
+# 可选：添加一个根路径的 GET 请求，用于健康检查或基本说明
+@app.get("/", response_class=PlainTextResponse)
+def root():
+    return f"AI 聊天服务已就绪。\n请向 /api/chat 发送 POST 请求。\n模型: {model_name}"
