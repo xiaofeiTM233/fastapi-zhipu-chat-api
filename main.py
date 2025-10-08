@@ -1,4 +1,5 @@
 import os
+import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from zai import ZhipuAiClient
@@ -141,6 +142,8 @@ class ChatRequest(BaseModel):
 @app.post("/api/chat")
 async def handle_chat_request(request: ChatRequest):
     try:
+        if not isinstance(request.data, str):
+            request.data = json.dumps(request.data)
         # 调用 chat 函数处理从请求中提取的文本
         ai_result = chat(request.data)
         return {"data": ai_result}
