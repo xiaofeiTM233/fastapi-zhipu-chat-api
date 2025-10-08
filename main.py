@@ -1,8 +1,9 @@
 import os
 import json
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
 from zai import ZhipuAiClient
+#from dotenv import load_dotenv
+#load_dotenv()
 
 # --- 1. 配置与初始化 ---
 
@@ -11,7 +12,7 @@ api_key = os.environ.get("ZHIPUAI_API_KEY")
 if not api_key:
     raise ValueError("环境变量 ZHIPUAI_API_KEY 未设置，服务无法启动。")
 
-# 从环境变量获取模型名称，如果不存在则使用默认值 "glm-4-flash"
+# 从环境变量获取模型名称，如果不存在则使用默认值 "glm-4-flash"，但是更推荐 "glm-4.5-flash" 深度思考质量更高
 model_name = os.environ.get("ZHIPUAI_MODEL", "glm-4-flash")
 
 # 初始化 ZhipuAI 客户端
@@ -63,7 +64,7 @@ def chat(user_prompt: str) -> str:
         }
     ]
     
-    content = """你是内容安全审查专家。请给以下校园墙投稿文本内容打标签。
+    content = f"""你是内容安全审查专家。请给以下校园墙投稿文本内容打标签。
 
 投稿详情（已JSON化处理，具体消息列表在list数组里，消息类型在消息type里）：
 {user_prompt}
@@ -110,8 +111,8 @@ def chat(user_prompt: str) -> str:
 请使用 output_tags 函数输出结果"""
     
     messages = [
-        {"role": "user", "content": user_prompt},
-        {"role": "system", "content": content}
+        {"role": "system", "content": "你是内容安全审查专家。"},
+        {"role": "user", "content": content}
     ]
     
     response = client.chat.completions.create(
@@ -124,7 +125,7 @@ def chat(user_prompt: str) -> str:
     if response.choices[0].message.tool_calls:
         return response.choices[0].message.tool_calls[0].function.arguments
     else:
-        return "输出异常"
+        return f"输出异常：{response.choices[0].message.content}"
 
 
 # --- 3. FastAPI 应用 ---
@@ -135,18 +136,31 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# 定义请求体的数据模型，确保请求的 JSON 中包含一个名为 'data' 的字符串
-class ChatRequest(BaseModel):
-    data: str = Field(..., min_length=1, description="用户发送给 AI 的纯文本内容")
+
+from fastapi import Request
 
 @app.post("/api/chat")
-async def handle_chat_request(request: ChatRequest):
+async def handle_chat_request(request: Request):
     try:
-        if not isinstance(request.data, str):
-            request.data = json.dumps(request.data)
+        request_data = await request.json()
+        if isinstance(request_data, str):
+            user_input = request_data
+        else:
+            try:
+                user_input = json.dumps(request_data, ensure_ascii=False)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"data": "输入数据格式无效，应为字符串或可序列化的 JSON 对象。"}
+                )
         # 调用 chat 函数处理从请求中提取的文本
-        ai_result = chat(request.data)
+        ai_result = chat(user_input)
         return {"data": ai_result}
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail={"data": "请求体必须是有效的 JSON 格式。"}
+        )
     except Exception as e:
         # 如果 chat 函数内部（如 API 调用）发生错误，打印日志并返回 500 错误
         print(f"处理请求时发生错误: {e}")
