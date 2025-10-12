@@ -25,7 +25,7 @@ print(f"服务已启动，使用 AI 模型: {model_name}")
 def chat(user_prompt: str) -> str:
     if not user_prompt or not user_prompt.strip():
         # 如果输入为空，直接返回提示，不调用 API
-        return "输入内容不能为空。"
+        return {"message": "输入内容不能为空。"}
         
     # 定义 tools 和 content
     tools = [
@@ -125,7 +125,7 @@ def chat(user_prompt: str) -> str:
     if response.choices[0].message.tool_calls:
         return response.choices[0].message.tool_calls[0].function.arguments
     else:
-        return f"输出异常：{response.choices[0].message.content}"
+        return {"message": f"输出异常：{response.choices[0].message.content}"}
 
 
 # --- 3. FastAPI 应用 ---
@@ -155,7 +155,7 @@ async def handle_chat_request(request: Request):
                 )
         # 调用 chat 函数处理从请求中提取的文本
         ai_result = chat(user_input)
-        return {"data": ai_result}
+        return {"data": json.loads(ai_result)}
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=400,
